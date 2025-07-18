@@ -1,4 +1,5 @@
 import os
+import subprocess
 from flask import Flask, request, render_template, abort
 
 app = Flask(__name__)
@@ -9,18 +10,18 @@ def index():
 
 @app.route('/ping')
 def ping():
-    host = request.args.get('host', '')
-
-    # 일부 필터링 – 우회 가능
-    if any(x in host for x in [';', '&&', '|']):
-        return 'Disallowed characters detected!', 400
+    host = request.args.get("host", "")
+    if any(x in host for x in [';', '|', '&']):
+        return "Invalid characters detected."
 
     try:
-        output = os.popen(f'ping -c 1 {host}').read()
-    except Exception as e:
-        output = f"Error: {e}"
+        result = subprocess.check_output(f"ping -c 1 {host}", shell=True, stderr=subprocess.STDOUT)
+        output = result.decode()
+    except subprocess.CalledProcessError as e:
+        output = e.output.decode()
 
-    return f"<pre>{output}</pre>"
+    return render_template('result.html', output=output)
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
